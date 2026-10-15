@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Personal Wellness Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Hide default radio styling to ensure consistent sizing across browsers while allowing zoom */
+        input[type="radio"] {
+            accent-color: #3b82f6;
+            cursor: pointer;
+            /* Enhance touch targets */
+            width: 1.75rem;
+            height: 1.75rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <div class="max-w-4xl mx-auto bg-white min-h-screen shadow-xl flex flex-col">
+        
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-6 md:p-10 shrink-0">
+            <h1 class="text-2xl md:text-4xl font-bold mb-3">Personal Wellness Assessment</h1>
+            <p class="text-blue-100 text-sm md:text-lg">
+                Please rate yourself on the following statements from 1 (Strongly Disagree) to 5 (Strongly Agree).
+            </p>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="p-4 md:p-10 flex-grow" id="survey-container">
+            <form id="survey-form">
+                <!-- Dynamic Content Will Be Injected Here -->
+            </form>
+        </main>
+
+        <!-- Footer Actions & Results -->
+        <footer class="bg-slate-100 p-6 md:p-10 border-t border-slate-200 shrink-0">
+            <div id="error-message" class="hidden mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded shadow-sm text-sm md:text-base font-medium">
+                Please answer all questions before calculating your score.
+            </div>
+            
+            <button type="button" id="calc-btn" class="w-full md:w-auto px-10 py-4 text-lg bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-transform transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50">
+                Calculate My Score
+            </button>
+
+            <!-- Results Section (Hidden by default) -->
+            <div id="results-section" class="hidden mt-10 pt-8 border-t-2 border-slate-200">
+                <h2 class="text-3xl font-extrabold text-slate-800 mb-8 text-center md:text-left">Your Results</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <!-- Category Scores -->
+                    <div id="category-results" class="space-y-6">
+                        <!-- Dynamic Category Bars -->
+                    </div>
+
+                    <!-- Total Score -->
+                    <div class="flex flex-col items-center justify-center bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-full min-h-[200px]">
+                        <span class="text-slate-500 font-bold mb-3 uppercase tracking-widest text-sm">Overall Average</span>
+                        <div class="text-7xl font-black text-blue-600" id="total-score">0%</div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const surveyData = [
+            {
+                category: "Misc",
+                questions: [
+                    "I get out of bed in the morning as soon as I wake up.",
+                    "I attend to my personal hygiene needs.",
+                    "I dress myself in clothes I choose.",
+                    "I care about looking neat and presentable.",
+                    "I buy my own food at a store.",
+                    "I prepare my own food.",
+                    "I take care of my own laundry.",
+                    "I clean my house.",
+                    "I get my prescriptions filled by myself.",
+                    "I manage my money.",
+                    "I reach my daily goals."
+                ]
+            },
+            {
+                category: "Sleep",
+                questions: [
+                    "I don't have trouble getting to sleep.",
+                    "I don't wake up frequently during the night.",
+                    "I don't have bad dreams of nightmares.",
+                    "I am alert during the daytime.",
+                    "I take a nap once a day.",
+                    "I don't eat a large meal before I go to bed."
+                ]
+            },
+            {
+                category: "Social",
+                questions: [
+                    "I feel comfortable being around other people.",
+                    "I feel comfortable talking to people.",
+                    "I have good relationships with my family members.",
+                    "I have friends I can count on.",
+                    "I talk with my friends on the telephone.",
+                    "I get together with others to celebrate holidays.",
+                    "I am interested in making new friends.",
+                    "I feel I would rather be with other people than by myself.",
+                    "I am motivated to join clubs and groups.",
+                    "I attend a support group.",
+                    "I enjoy activities with friends, like going to movies, concerts, out to eat etc."
+                ]
+            },
+            {
+                category: "Medication",
+                questions: [
+                    "I take my medication the way my doctor prescribed it.",
+                    "I use a reminder system for taking my medicine.",
+                    "I am comfortable talking to my doctor about my medicine.",
+                    "I am comfortable talking to my pharmacist about my medicine.",
+                    "I remember to take my medicine.",
+                    "I am able to tolerate my medicine.",
+                    "I avoid drinking alcohol."
+                ]
+            },
+            {
+                category: "Diet",
+                questions: [
+                    "I eat food low in fat.",
+                    "I drink 6 to 8 glasses of water every day.",
+                    "I avoid drinks with caffeine.",
+                    "I include high fiber foods in my diet.",
+                    "I avoid sweets and desserts.",
+                    "I avoid adding salt to my food at the table.",
+                    "I vary my diet by eating different foods."
+                ]
+            },
+            {
+                category: "Exercise",
+                questions: [
+                    "I stick to a regular exercise routine.",
+                    "I exercise when I am feeling out of sorts.",
+                    "I exercise at least 20 minutes a day.",
+                    "Exercising helps me sleep better at night.",
+                    "I fit exercise into my everyday activities.",
+                    "I warm up for a few minutes before beginning my exercise routine.",
+                    "I exercise with a friend or family member."
+                ]
+            }
+        ];
+
+        const formElement = document.getElementById('survey-form');
+        const calcBtn = document.getElementById('calc-btn');
+        const errorMessage = document.getElementById('error-message');
+        const resultsSection = document.getElementById('results-section');
+        const categoryResultsContainer = document.getElementById('category-results');
+        const totalScoreElement = document.getElementById('total-score');
+
+        // Render the survey dynamically with mobile-first grid layout
+        function renderSurvey() {
+            let html = '';
+
+            surveyData.forEach((section, cIndex) => {
+                html += `
+                    <div class="mb-12 last:mb-0">
+                        <h3 class="text-2xl font-black text-slate-800 mb-6 pb-2 border-b-4 border-blue-500 inline-block">${section.category}</h3>
+                        <div class="space-y-4">
+                `;
+
+                section.questions.forEach((q, qIndex) => {
+                    const qId = `q_${cIndex}_${qIndex}`;
+                    html += `
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col lg:flex-row lg:items-center gap-5 hover:border-blue-400 transition-colors">
+                            <div class="text-slate-700 font-medium text-base md:text-lg lg:w-1/2 leading-relaxed">${q}</div>
+                            
+                            <div class="lg:w-1/2 flex flex-col w-full">
+                                <div class="flex justify-between items-center w-full bg-slate-50 rounded-lg p-2 md:p-3 border border-slate-100">
+                                    ${[1, 2, 3, 4, 5].map(val => `
+                                        <label class="flex flex-col items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-blue-50 transition-colors flex-1">
+                                            <span class="text-sm font-bold text-slate-500">${val}</span>
+                                            <input type="radio" name="${qId}" value="${val}">
+                                        </label>
+                                    `).join('')}
+                                </div>
+                                <div class="flex justify-between w-full px-2 mt-2">
+                                    <span class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-wide w-20 leading-tight">Strongly Disagree</span>
+                                    <span class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-wide w-20 leading-tight text-right">Strongly Agree</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            formElement.innerHTML = html;
+        }
+
+        // Calculate Scores
+        function calculateScores() {
+            let allAnswered = true;
+            let categoryPercentages = [];
+            let totalPercentageSum = 0;
+
+            // Reset UI state
+            errorMessage.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+            categoryResultsContainer.innerHTML = '';
+
+            // Validate answers and calculate per category
+            surveyData.forEach((section, cIndex) => {
+                let categoryScore = 0;
+                let maxPossibleScore = section.questions.length * 5;
+
+                section.questions.forEach((_, qIndex) => {
+                    const qId = `q_${cIndex}_${qIndex}`;
+                    const selected = document.querySelector(`input[name="${qId}"]:checked`);
+                    
+                    if (selected) {
+                        categoryScore += parseInt(selected.value);
+                    } else {
+                        allAnswered = false;
+                        // Highlight missing question visually
+                        const questionContainer = document.querySelector(`input[name="${qId}"]`).closest('.bg-white');
+                        questionContainer.classList.add('border-red-400', 'bg-red-50');
+                        setTimeout(() => {
+                            questionContainer.classList.remove('border-red-400', 'bg-red-50');
+                        }, 3000);
+                    }
+                });
+
+                // Tally category percentage
+                let percentage = (categoryScore / maxPossibleScore) * 100;
+                categoryPercentages.push({
+                    name: section.category,
+                    percent: Math.round(percentage) || 0
+                });
+                totalPercentageSum += percentage;
+            });
+
+            if (!allAnswered) {
+                errorMessage.classList.remove('hidden');
+                // Smooth scroll to the error message so the user sees it
+                errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            // Render Results Bars
+            categoryPercentages.forEach(cat => {
+                // Determine color based on threshold
+                let colorClass = 'bg-blue-500';
+                if (cat.percent >= 80) colorClass = 'bg-green-500';
+                else if (cat.percent <= 50) colorClass = 'bg-amber-500';
+
+                categoryResultsContainer.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="font-bold text-slate-700 text-lg">${cat.name}</span>
+                            <span class="font-black text-slate-900 text-xl">${cat.percent}%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
+                            <div class="${colorClass} h-4 rounded-full transition-all duration-1000 ease-out" style="width: 0%" data-target-width="${cat.percent}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Calculate overall total score average across all categories
+            let finalAverage = Math.round(totalPercentageSum / surveyData.length);
+            totalScoreElement.innerText = `${finalAverage}%`;
+
+            // Reveal results and scroll down
+            resultsSection.classList.remove('hidden');
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Trigger animation on progress bars
+            setTimeout(() => {
+                const progressBars = categoryResultsContainer.querySelectorAll('[data-target-width]');
+                progressBars.forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-target-width');
+                });
+            }, 100);
+        }
+
+        // Initialize survey on load
+        renderSurvey();
+        
+        // Attach click handler
+        calcBtn.addEventListener('click', calculateScores);
+
+    </script>
+</body>
+</html>
